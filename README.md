@@ -1,38 +1,44 @@
 # One-Time Token Service — Starter Scaffold
 
-Build a single-use, expiring token service backed by Redis. You implement two
-functions and a test that proves a token can be used **at most once**, even when
-five consumers hit it at the same instant.
-
-This scaffold gives you the plumbing (dependencies, `.env`, file shapes). Your
-job is the two functions and the concurrency test — see the `TODO`s in the code.
+Build a single-use, expiring token service backed by Redis. The service issues
+cryptographically random token IDs, stores JSON payloads with a TTL, and consumes
+each token atomically.
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env      # then set REDIS_URL (local Docker Redis from LU 4.0.1)
+cp .env.example .env      # then set REDIS_URL
 docker start redis-m4     # make sure your Redis is running
 ```
 
-## What to implement
+## Implementation
 
-- **`token-service.js`**
-  - `issueToken(payload, ttlSeconds)` — random id + JSON payload + atomic `SET ... EX`.
-  - `consumeToken(tokenId)` — atomic `GETDEL`; return `{ ok, payload }` / `{ ok: false, reason }`.
-- **`test.js`**
-  - Issue one token, fire **5 `consumeToken` calls at once** with `Promise.all`,
-    assert **exactly one** succeeds.
+- **`token-service.js`** — `issueToken(payload, ttlSeconds)` uses a random
+  128-bit ID and atomic `SET ... EX ... NX`. `consumeToken(tokenId)` uses
+  atomic `GETDEL` and returns a typed success/invalid result.
+- **`test.js`** — starts five concurrent consumers with `Promise.all`, checks
+  the payload and asserts exactly one winner.
 
-## Run the test
+## Run the concurrency test
 
 ```bash
 npm test
 ```
 
-You should see `winners: 1` and `PASS: token was single-use.`
+Expected result (the token ID is random):
+
+```text
+issued token: <32-character random hex id>
+winners: 1
+PASS: token was single-use.
+```
+
+The expected winner count is **1**. Run `npm test` with the configured Redis
+instance to record the actual output; this environment did not have a live Redis
+connection available to verify a runtime result.
 
 ## Submit
 
-Open a Pull Request containing your `token-service.js`, `test.js`, and paste the
-test output (showing `winners: 1`) in the PR description. Submit the PR link.
+The pull request contains the completed `token-service.js` and `test.js`,
+plus the expected concurrency-test output and the runtime-verification note.
